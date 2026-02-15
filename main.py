@@ -18,11 +18,11 @@ from telegram.ext import (
 )
 
 # ==============================
-# ENV VARIABLES
+# CONFIG
 # ==============================
 
-BOT_TOKEN = os.getenv("8523179907:AAHRx6TEWNSs3pH3n_2BZnOz6_hpYnoFBgE")
-ADMIN_ID = int(os.getenv("1210446923"))
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = 1210446923   # <-- o'zingning Telegram ID
 
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN topilmadi! Railway Variables ga qo'shing.")
