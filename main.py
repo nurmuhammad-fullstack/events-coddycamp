@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+import os
 from datetime import datetime
 from telegram import (
     Update,
@@ -16,12 +17,21 @@ from telegram.ext import (
     filters,
 )
 
+# ==============================
+# ENV VARIABLES
+# ==============================
 
-BOT_TOKEN = "8584577242:AAF3PUrFwRHLwW6OqCCPh87Qc7C8sKnoVQc"
-ADMIN_ID = 8520572898  
+BOT_TOKEN = os.getenv("8523179907:AAHRx6TEWNSs3pH3n_2BZnOz6_hpYnoFBgE")
+ADMIN_ID = int(os.getenv("1210446923"))
+
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN topilmadi! Railway Variables ga qo'shing.")
 
 ASK_POST = 1
 
+# ==============================
+# LOGGING
+# ==============================
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -30,6 +40,9 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# ==============================
+# DATABASE
+# ==============================
 
 conn = sqlite3.connect("database.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -45,9 +58,11 @@ CREATE TABLE IF NOT EXISTS chats (
 
 conn.commit()
 
+# ==============================
+# HANDLERS
+# ==============================
 
-
-async def start(update: Update, context: Context== STypes.DEFAULT_TYPE):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("⛔ Ruxsat yo'q.")
         return ConversationHandler.END
@@ -67,7 +82,6 @@ async def start(update: Update, context: Context== STypes.DEFAULT_TYPE):
         reply_markup=markup
     )
     return ConversationHandler.END
-
 
 
 async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -93,7 +107,6 @@ async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"O'chirildi: {chat.id}")
 
 
-
 async def post_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return ConversationHandler.END
@@ -103,7 +116,6 @@ async def post_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=ReplyKeyboardRemove()
     )
     return ASK_POST
-
 
 
 async def send_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -134,7 +146,6 @@ async def send_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return await start(update, context)
 
 
-
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -155,7 +166,9 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👥 Guruhlar: {groups}"
     )
 
-
+# ==============================
+# MAIN
+# ==============================
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
