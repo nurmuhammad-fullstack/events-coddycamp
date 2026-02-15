@@ -1,4 +1,3 @@
-
 import logging
 import sqlite3
 import os
@@ -23,7 +22,7 @@ from telegram.ext import (
 # ==============================
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = 1210446923  # <-- o'zingning Telegram ID
+ADMIN_ID = 1210446923
 
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN environment variable topilmadi!")
@@ -56,7 +55,6 @@ CREATE TABLE IF NOT EXISTS chats (
     added_date TEXT
 )
 """)
-
 conn.commit()
 
 # ==============================
@@ -76,12 +74,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ["📊 Statistika"]
     ]
 
-    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
     await update.message.reply_text(
         f"🔐 Admin panel\n\n"
         f"📌 Ulangan chatlar: {total}",
-        reply_markup=markup
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     )
 
     return ConversationHandler.END
@@ -91,7 +87,8 @@ async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     member = update.my_chat_member.new_chat_member
 
-    if member.status in ["administrator", "member"]:
+    # Faqat administrator bo‘lsa saqlaymiz
+    if member.status == "administrator":
         cursor.execute("""
         INSERT OR IGNORE INTO chats (chat_id, chat_type, title, added_date)
         VALUES (?, ?, ?, ?)
@@ -104,6 +101,7 @@ async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.commit()
         logger.info(f"Qo'shildi: {chat.id}")
 
+    # Agar bot chiqarib yuborilsa yoki adminlikdan olinса
     elif member.status in ["left", "kicked"]:
         cursor.execute("DELETE FROM chats WHERE chat_id=?", (chat.id,))
         conn.commit()
@@ -141,6 +139,10 @@ async def send_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
             failed += 1
             logger.warning(f"Xatolik {chat_id}: {e}")
 
+            # Agar yuborolmasa — bazadan o‘chiramiz
+            cursor.execute("DELETE FROM chats WHERE chat_id=?", (chat_id,))
+            conn.commit()
+
     await update.message.reply_text(
         f"✅ Yuborildi: {sent}\n"
         f"❌ Xatolik: {failed}"
@@ -168,6 +170,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📢 Kanallar: {channels}\n"
         f"👥 Guruhlar: {groups}"
     )
+
 
 # ==============================
 # MAIN
