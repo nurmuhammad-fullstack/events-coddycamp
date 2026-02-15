@@ -21,7 +21,7 @@ from telegram.ext import (
 # CONFIG
 # ==============================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("8523179907:AAHRx6TEWNSs3pH3n_2BZnOz6_hpYnoFBgE")  # <-- o'zingning bot tokening
 ADMIN_ID = 1210446923   # <-- o'zingning Telegram ID
 
 if not BOT_TOKEN:
