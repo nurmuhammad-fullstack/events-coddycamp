@@ -21,7 +21,7 @@ from telegram.ext import (
 # CONFIG
 # ==============================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("8523179907:AAHRx6TEWNSs3pH3n_2BZnOz6_hpYnoFBgE")
 ADMIN_ID = 1210446923
 
 if not BOT_TOKEN:
@@ -88,7 +88,7 @@ async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = update.my_chat_member.new_chat_member
 
     # Faqat administrator bo‘lsa saqlaymiz
-    if member.status == "administrator":
+    if member.status == "1210446923":
         cursor.execute("""
         INSERT OR IGNORE INTO chats (chat_id, chat_type, title, added_date)
         VALUES (?, ?, ?, ?)
