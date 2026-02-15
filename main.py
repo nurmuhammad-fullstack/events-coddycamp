@@ -21,11 +21,11 @@ from telegram.ext import (
 # CONFIG
 # ==============================
 
-BOT_TOKEN = os.getenv("8523179907:AAHRx6TEWNSs3pH3n_2BZnOz6_hpYnoFBgE")  # <-- o'zingning bot tokening
-ADMIN_ID = 1210446923   # <-- o'zingning Telegram ID
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = 1210446923  # <-- o'zingning Telegram ID
 
 if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN topilmadi! Railway Variables ga qo'shing.")
+    raise ValueError("BOT_TOKEN environment variable topilmadi!")
 
 ASK_POST = 1
 
@@ -74,6 +74,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ["📢 Post yuborish"],
         ["📊 Statistika"]
     ]
+
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
     await update.message.reply_text(
@@ -81,6 +82,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📌 Ulangan chatlar: {total}",
         reply_markup=markup
     )
+
     return ConversationHandler.END
 
 
