@@ -2,11 +2,7 @@ import logging
 import sqlite3
 import os
 from datetime import datetime
-from telegram import (
-    Update,
-    ReplyKeyboardMarkup,
-    ReplyKeyboardRemove,
-)
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -21,12 +17,8 @@ from telegram.ext import (
 # CONFIG
 # ==============================
 
-BOT_TOKEN = os.getenv("8523179907:AAHRx6TEWNSs3pH3n_2BZnOz6_hpYnoFBgE")
+BOT_TOKEN = os.environ.get("8523179907:AAHRx6TEWNSs3pH3n_2BZnOz6_hpYnoFBgE")
 ADMIN_ID = 1210446923
-
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN environment variable topilmadi!")
-
 ASK_POST = 1
 
 # ==============================
@@ -37,8 +29,6 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
-
-logger = logging.getLogger(__name__)
 
 # ==============================
 # DATABASE
@@ -63,8 +53,7 @@ conn.commit()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Ruxsat yo'q.")
-        return ConversationHandler.END
+        return
 
     cursor.execute("SELECT COUNT(*) FROM chats")
     total = cursor.fetchone()[0]
@@ -75,8 +64,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_text(
-        f"🔐 Admin panel\n\n"
-        f"📌 Ulangan chatlar: {total}",
+        f"🔐 Admin panel\n\n📌 Ulangan chatlar: {total}",
         reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     )
 
@@ -87,7 +75,6 @@ async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     member = update.my_chat_member.new_chat_member
 
-    # Faqat administrator bo‘lsa saqlaymiz
     if member.status == "administrator":
         cursor.execute("""
         INSERT OR IGNORE INTO chats (chat_id, chat_type, title, added_date)
@@ -99,13 +86,10 @@ async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ))
         conn.commit()
-        logger.info(f"Qo'shildi: {chat.id}")
 
-    # Agar bot chiqarib yuborilsa yoki adminlikdan olinса
     elif member.status in ["left", "kicked"]:
         cursor.execute("DELETE FROM chats WHERE chat_id=?", (chat.id,))
         conn.commit()
-        logger.info(f"O'chirildi: {chat.id}")
 
 
 async def post_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -124,7 +108,6 @@ async def send_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     message = update.message
-
     cursor.execute("SELECT chat_id FROM chats")
     chats = cursor.fetchall()
 
@@ -135,17 +118,11 @@ async def send_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await message.copy(chat_id=chat_id)
             sent += 1
-        except Exception as e:
+        except:
             failed += 1
-            logger.warning(f"Xatolik {chat_id}: {e}")
-
-            # Agar yuborolmasa — bazadan o‘chiramiz
-            cursor.execute("DELETE FROM chats WHERE chat_id=?", (chat_id,))
-            conn.commit()
 
     await update.message.reply_text(
-        f"✅ Yuborildi: {sent}\n"
-        f"❌ Xatolik: {failed}"
+        f"✅ Yuborildi: {sent}\n❌ Xatolik: {failed}"
     )
 
     return await start(update, context)
@@ -158,19 +135,9 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute("SELECT COUNT(*) FROM chats")
     total = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM chats WHERE chat_type='channel'")
-    channels = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM chats WHERE chat_type='supergroup'")
-    groups = cursor.fetchone()[0]
-
     await update.message.reply_text(
-        f"📊 Statistika\n\n"
-        f"🔹 Jami: {total}\n"
-        f"📢 Kanallar: {channels}\n"
-        f"👥 Guruhlar: {groups}"
+        f"📊 Statistika\n\n🔹 Jami chatlar: {total}"
     )
-
 
 # ==============================
 # MAIN
@@ -180,13 +147,9 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
     conv = ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.Regex("^📢 Post yuborish$"), post_start)
-        ],
+        entry_points=[MessageHandler(filters.Regex("^📢 Post yuborish$"), post_start)],
         states={
-            ASK_POST: [
-                MessageHandler(filters.ALL & ~filters.COMMAND, send_post)
-            ]
+            ASK_POST: [MessageHandler(filters.ALL & ~filters.COMMAND, send_post)]
         },
         fallbacks=[],
     )
@@ -196,7 +159,6 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^📊 Statistika$"), stats))
     app.add_handler(ChatMemberHandler(track_bot, ChatMemberHandler.MY_CHAT_MEMBER))
 
-    logger.info("Bot ishga tushdi...")
     app.run_polling()
 
 
