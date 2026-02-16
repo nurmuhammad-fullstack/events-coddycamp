@@ -1,8 +1,11 @@
 import logging
 import sqlite3
-import os
 from datetime import datetime
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+)
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -13,20 +16,12 @@ from telegram.ext import (
     filters,
 )
 
-# =====================================================
-# CONFIG
-# =====================================================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = 1210446923
+BOT_TOKEN = "8584577242:AAF3PUrFwRHLwW6OqCCPh87Qc7C8sKnoVQc"
+ADMIN_ID = 8520572898  
+
 ASK_POST = 1
 
-if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN environment variable topilmadi!")
-
-# =====================================================
-# LOGGING
-# =====================================================
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -35,9 +30,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# =====================================================
-# DATABASE
-# =====================================================
 
 conn = sqlite3.connect("database.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -50,15 +42,15 @@ CREATE TABLE IF NOT EXISTS chats (
     added_date TEXT
 )
 """)
+
 conn.commit()
 
-# =====================================================
-# HANDLERS
-# =====================================================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def start(update: Update, context: Context== STypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
-        return
+        await update.message.reply_text("⛔ Ruxsat yo'q.")
+        return ConversationHandler.END
 
     cursor.execute("SELECT COUNT(*) FROM chats")
     total = cursor.fetchone()[0]
@@ -67,20 +59,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ["📢 Post yuborish"],
         ["📊 Statistika"]
     ]
+    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
     await update.message.reply_text(
-        f"🔐 Admin panel\n\n📌 Ulangan chatlar: {total}",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        f"🔐 Admin panel\n\n"
+        f"📌 Ulangan chatlar: {total}",
+        reply_markup=markup
     )
-
     return ConversationHandler.END
+
 
 
 async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     member = update.my_chat_member.new_chat_member
 
-    if member.status == "administrator":
+    if member.status in ["administrator", "member"]:
         cursor.execute("""
         INSERT OR IGNORE INTO chats (chat_id, chat_type, title, added_date)
         VALUES (?, ?, ?, ?)
@@ -91,12 +85,13 @@ async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ))
         conn.commit()
-        logger.info(f"Chat qo'shildi: {chat.id}")
+        logger.info(f"Qo'shildi: {chat.id}")
 
     elif member.status in ["left", "kicked"]:
         cursor.execute("DELETE FROM chats WHERE chat_id=?", (chat.id,))
         conn.commit()
-        logger.info(f"Chat o'chirildi: {chat.id}")
+        logger.info(f"O'chirildi: {chat.id}")
+
 
 
 async def post_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -110,11 +105,13 @@ async def post_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ASK_POST
 
 
+
 async def send_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return ConversationHandler.END
 
     message = update.message
+
     cursor.execute("SELECT chat_id FROM chats")
     chats = cursor.fetchall()
 
@@ -129,15 +126,13 @@ async def send_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
             failed += 1
             logger.warning(f"Xatolik {chat_id}: {e}")
 
-            # Agar chatda bot o'chirilgan bo'lsa, bazadan o'chiramiz
-            cursor.execute("DELETE FROM chats WHERE chat_id=?", (chat_id,))
-            conn.commit()
-
     await update.message.reply_text(
-        f"✅ Yuborildi: {sent}\n❌ Xatolik: {failed}"
+        f"✅ Yuborildi: {sent}\n"
+        f"❌ Xatolik: {failed}"
     )
 
     return await start(update, context)
+
 
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -160,9 +155,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👥 Guruhlar: {groups}"
     )
 
-# =====================================================
-# MAIN
-# =====================================================
+
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
