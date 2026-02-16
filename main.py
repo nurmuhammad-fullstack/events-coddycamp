@@ -14,7 +14,7 @@ from telegram.ext import (
 )
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = 8520572898
+ADMIN_ID = 1210446923
 ASK_POST = 1
 
 if not BOT_TOKEN:
