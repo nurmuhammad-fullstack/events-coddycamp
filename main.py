@@ -13,26 +13,31 @@ from telegram.ext import (
     filters,
 )
 
-# ==============================
+# =====================================================
 # CONFIG
-# ==============================
+# =====================================================
 
-BOT_TOKEN = os.environ.get("8523179907:AAHRx6TEWNSs3pH3n_2BZnOz6_hpYnoFBgE")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 1210446923
 ASK_POST = 1
 
-# ==============================
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN environment variable topilmadi!")
+
+# =====================================================
 # LOGGING
-# ==============================
+# =====================================================
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
-# ==============================
+logger = logging.getLogger(__name__)
+
+# =====================================================
 # DATABASE
-# ==============================
+# =====================================================
 
 conn = sqlite3.connect("database.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -47,9 +52,9 @@ CREATE TABLE IF NOT EXISTS chats (
 """)
 conn.commit()
 
-# ==============================
+# =====================================================
 # HANDLERS
-# ==============================
+# =====================================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -86,10 +91,12 @@ async def track_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ))
         conn.commit()
+        logger.info(f"Chat qo'shildi: {chat.id}")
 
     elif member.status in ["left", "kicked"]:
         cursor.execute("DELETE FROM chats WHERE chat_id=?", (chat.id,))
         conn.commit()
+        logger.info(f"Chat o'chirildi: {chat.id}")
 
 
 async def post_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -118,8 +125,13 @@ async def send_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await message.copy(chat_id=chat_id)
             sent += 1
-        except:
+        except Exception as e:
             failed += 1
+            logger.warning(f"Xatolik {chat_id}: {e}")
+
+            # Agar chatda bot o'chirilgan bo'lsa, bazadan o'chiramiz
+            cursor.execute("DELETE FROM chats WHERE chat_id=?", (chat_id,))
+            conn.commit()
 
     await update.message.reply_text(
         f"✅ Yuborildi: {sent}\n❌ Xatolik: {failed}"
@@ -135,21 +147,34 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute("SELECT COUNT(*) FROM chats")
     total = cursor.fetchone()[0]
 
+    cursor.execute("SELECT COUNT(*) FROM chats WHERE chat_type='channel'")
+    channels = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM chats WHERE chat_type='supergroup'")
+    groups = cursor.fetchone()[0]
+
     await update.message.reply_text(
-        f"📊 Statistika\n\n🔹 Jami chatlar: {total}"
+        f"📊 Statistika\n\n"
+        f"🔹 Jami: {total}\n"
+        f"📢 Kanallar: {channels}\n"
+        f"👥 Guruhlar: {groups}"
     )
 
-# ==============================
+# =====================================================
 # MAIN
-# ==============================
+# =====================================================
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
     conv = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("^📢 Post yuborish$"), post_start)],
+        entry_points=[
+            MessageHandler(filters.Regex("^📢 Post yuborish$"), post_start)
+        ],
         states={
-            ASK_POST: [MessageHandler(filters.ALL & ~filters.COMMAND, send_post)]
+            ASK_POST: [
+                MessageHandler(filters.ALL & ~filters.COMMAND, send_post)
+            ]
         },
         fallbacks=[],
     )
@@ -159,6 +184,7 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^📊 Statistika$"), stats))
     app.add_handler(ChatMemberHandler(track_bot, ChatMemberHandler.MY_CHAT_MEMBER))
 
+    logger.info("Bot ishga tushdi...")
     app.run_polling()
 
 
